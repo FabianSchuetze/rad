@@ -25,11 +25,11 @@ class VideoRecorder(object):
                     width=self.width,
                     camera_id=self.camera_id
                 )
-            except:
+            except BaseException:
                 frame = env.render(
                     mode='rgb_array',
                 )
-    
+
             self.frames.append(frame)
 
     def save(self, file_name):

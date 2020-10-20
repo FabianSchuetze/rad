@@ -3,7 +3,7 @@ import torch.nn as nn
 
 
 def tie_weights(src, trg):
-    assert type(src) == type(trg)
+    assert isinstance(src, type(trg))
     trg.weight = src.weight
     trg.bias = src.bias
 
@@ -12,17 +12,25 @@ OUT_DIM = {2: 39, 4: 35, 6: 31}
 OUT_DIM_64 = {2: 29, 4: 25, 6: 21}
 OUT_DIM_108 = {4: 47}
 
- 
+
 class PixelEncoder(nn.Module):
     """Convolutional encoder of pixels observations."""
-    def __init__(self, obs_shape, feature_dim, num_layers=2, num_filters=32,output_logits=False):
+
+    def __init__(
+            self,
+            obs_shape,
+            feature_dim,
+            num_layers=2,
+            num_filters=32,
+            output_logits=False):
         super().__init__()
 
         assert len(obs_shape) == 3
         self.obs_shape = obs_shape
         self.feature_dim = feature_dim
         self.num_layers = num_layers
-        # try 2 5x5s with strides 2x2. with samep adding, it should reduce 84 to 21, so with valid, it should be even smaller than 21.
+        # try 2 5x5s with strides 2x2. with samep adding, it should reduce 84
+        # to 21, so with valid, it should be even smaller than 21.
         self.convs = nn.ModuleList(
             [nn.Conv2d(obs_shape[0], num_filters, 3, stride=2)]
         )
@@ -106,7 +114,7 @@ class PixelEncoder(nn.Module):
 
 
 class IdentityEncoder(nn.Module):
-    def __init__(self, obs_shape, feature_dim, num_layers, num_filters,*args):
+    def __init__(self, obs_shape, feature_dim, num_layers, num_filters, *args):
         super().__init__()
 
         assert len(obs_shape) == 1
@@ -126,8 +134,12 @@ _AVAILABLE_ENCODERS = {'pixel': PixelEncoder, 'identity': IdentityEncoder}
 
 
 def make_encoder(
-    encoder_type, obs_shape, feature_dim, num_layers, num_filters, output_logits=False
-):
+        encoder_type,
+        obs_shape,
+        feature_dim,
+        num_layers,
+        num_filters,
+        output_logits=False):
     assert encoder_type in _AVAILABLE_ENCODERS
     return _AVAILABLE_ENCODERS[encoder_type](
         obs_shape, feature_dim, num_layers, num_filters, output_logits

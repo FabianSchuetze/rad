@@ -131,7 +131,7 @@ class Logger(object):
 
     def log(self, key, value, step, n=1):
         assert key.startswith('train') or key.startswith('eval')
-        if type(value) == torch.Tensor:
+        if isinstance(value, torch.Tensor):
             value = value.item()
         self._try_sw_log(key, value / n, step)
         mg = self._train_mg if key.startswith('train') else self._eval_mg

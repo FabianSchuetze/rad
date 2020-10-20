@@ -7,11 +7,11 @@ import math
 
 import utils
 from encoder import make_encoder
-import data_augs as rad 
+import data_augs as rad
 
 LOG_FREQ = 10000
 
-        
+
 def gaussian_logprob(noise, log_std):
     """Compute Gaussian log probability."""
     residual = (-0.5 * noise.pow(2) - log_std).sum(-1, keepdim=True)
@@ -47,6 +47,7 @@ def weight_init(m):
 
 class Actor(nn.Module):
     """MLP actor network."""
+
     def __init__(
         self, obs_shape, action_shape, hidden_dim, encoder_type,
         encoder_feature_dim, log_std_min, log_std_max, num_layers, num_filters
@@ -117,6 +118,7 @@ class Actor(nn.Module):
 
 class QFunction(nn.Module):
     """MLP for q-function."""
+
     def __init__(self, obs_dim, action_dim, hidden_dim):
         super().__init__()
 
@@ -135,12 +137,12 @@ class QFunction(nn.Module):
 
 class Critic(nn.Module):
     """Critic network, employes two q-functions."""
+
     def __init__(
         self, obs_shape, action_shape, hidden_dim, encoder_type,
         encoder_feature_dim, num_layers, num_filters
     ):
         super().__init__()
-
 
         self.encoder = make_encoder(
             encoder_type, obs_shape, encoder_feature_dim, num_layers,
@@ -188,13 +190,20 @@ class CURL(nn.Module):
     CURL
     """
 
-    def __init__(self, obs_shape, z_dim, batch_size, critic, critic_target, output_type="continuous"):
+    def __init__(
+            self,
+            obs_shape,
+            z_dim,
+            batch_size,
+            critic,
+            critic_target,
+            output_type="continuous"):
         super(CURL, self).__init__()
         self.batch_size = batch_size
 
         self.encoder = critic.encoder
 
-        self.encoder_target = critic_target.encoder 
+        self.encoder_target = critic_target.encoder
 
         self.W = nn.Parameter(torch.rand(z_dim, z_dim))
         self.output_type = output_type
@@ -215,7 +224,7 @@ class CURL(nn.Module):
             z_out = z_out.detach()
         return z_out
 
-    #def update_target(self):
+    # def update_target(self):
     #    utils.soft_update_params(self.encoder, self.encoder_target, 0.05)
 
     def compute_logits(self, z_a, z_pos):
@@ -231,8 +240,10 @@ class CURL(nn.Module):
         logits = logits - torch.max(logits, 1)[0][:, None]
         return logits
 
+
 class RadSacAgent(object):
     """RAD with SAC."""
+
     def __init__(
         self,
         obs_shape,
@@ -262,7 +273,7 @@ class RadSacAgent(object):
         log_interval=100,
         detach_encoder=False,
         latent_dim=128,
-        data_augs = '',
+        data_augs='',
     ):
         self.device = device
         self.discount = discount
@@ -281,17 +292,17 @@ class RadSacAgent(object):
         self.augs_funcs = {}
 
         aug_to_func = {
-                'crop':rad.random_crop,
-                'grayscale':rad.random_grayscale,
-                'cutout':rad.random_cutout,
-                'cutout_color':rad.random_cutout_color,
-                'flip':rad.random_flip,
-                'rotate':rad.random_rotation,
-                'rand_conv':rad.random_convolution,
-                'color_jitter':rad.random_color_jitter,
-                'translate':rad.random_translate,
-                'no_aug':rad.no_aug,
-            }
+            'crop': rad.random_crop,
+            'grayscale': rad.random_grayscale,
+            'cutout': rad.random_cutout,
+            'cutout_color': rad.random_cutout_color,
+            'flip': rad.random_flip,
+            'rotate': rad.random_rotation,
+            'rand_conv': rad.random_convolution,
+            'color_jitter': rad.random_color_jitter,
+            'translate': rad.random_translate,
+            'no_aug': rad.no_aug,
+        }
 
         for aug_name in self.data_augs.split('-'):
             assert aug_name in aug_to_func, 'invalid data aug string'
@@ -322,7 +333,7 @@ class RadSacAgent(object):
         self.log_alpha.requires_grad = True
         # set target entropy to -|A|
         self.target_entropy = -np.prod(action_shape)
-        
+
         # optimizers
         self.actor_optimizer = torch.optim.Adam(
             self.actor.parameters(), lr=actor_lr, betas=(actor_beta, 0.999)
@@ -338,8 +349,14 @@ class RadSacAgent(object):
 
         if self.encoder_type == 'pixel':
             # create CURL encoder (the 128 batch size is probably unnecessary)
-            self.CURL = CURL(obs_shape, encoder_feature_dim,
-                        self.latent_dim, self.critic,self.critic_target, output_type='continuous').to(self.device)
+            self.CURL = CURL(
+                obs_shape,
+                encoder_feature_dim,
+                self.latent_dim,
+                self.critic,
+                self.critic_target,
+                output_type='continuous').to(
+                self.device)
 
             # optimizer for critic encoder for reconstruction loss
             self.encoder_optimizer = torch.optim.Adam(
@@ -377,7 +394,7 @@ class RadSacAgent(object):
     def sample_action(self, obs):
         if obs.shape[-1] != self.image_size:
             obs = utils.center_crop_image(obs, self.image_size)
- 
+
         with torch.no_grad():
             obs = torch.FloatTensor(obs).to(self.device)
             obs = obs.unsqueeze(0)
@@ -400,7 +417,6 @@ class RadSacAgent(object):
         if step % self.log_interval == 0:
             L.log('train_critic/loss', critic_loss, step)
 
-
         # Optimize the critic
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
@@ -421,7 +437,7 @@ class RadSacAgent(object):
             L.log('train_actor/target_entropy', self.target_entropy, step)
         entropy = 0.5 * log_std.shape[1] * \
             (1.0 + np.log(2 * np.pi)) + log_std.sum(dim=-1)
-        if step % self.log_interval == 0:                                    
+        if step % self.log_interval == 0:
             L.log('train_actor/entropy', entropy.mean(), step)
 
         # optimize the actor
@@ -441,8 +457,8 @@ class RadSacAgent(object):
         self.log_alpha_optimizer.step()
 
     def update_cpc(self, obs_anchor, obs_pos, cpc_kwargs, L, step):
-        
-        # time flips 
+
+        # time flips
         """
         time_pos = cpc_kwargs["time_pos"]
         time_anchor= cpc_kwargs["time_anchor"]
@@ -451,11 +467,11 @@ class RadSacAgent(object):
         """
         z_a = self.CURL.encode(obs_anchor)
         z_pos = self.CURL.encode(obs_pos, ema=True)
-        
+
         logits = self.CURL.compute_logits(z_a, z_pos)
         labels = torch.arange(logits.shape[0]).long().to(self.device)
         loss = self.cross_entropy_loss(logits, labels)
-        
+
         self.encoder_optimizer.zero_grad()
         self.cpc_optimizer.zero_grad()
         loss.backward()
@@ -465,13 +481,14 @@ class RadSacAgent(object):
         if step % self.log_interval == 0:
             L.log('train/curl_loss', loss, step)
 
-
     def update(self, replay_buffer, L, step):
+        breakpoint()
         if self.encoder_type == 'pixel':
-            obs, action, reward, next_obs, not_done = replay_buffer.sample_rad(self.augs_funcs)
+            obs, action, reward, next_obs, not_done = replay_buffer.sample_rad(
+                self.augs_funcs)
         else:
             obs, action, reward, next_obs, not_done = replay_buffer.sample_proprio()
-    
+
         if step % self.log_interval == 0:
             L.log('train/batch_reward', reward.mean(), step)
 
@@ -491,8 +508,8 @@ class RadSacAgent(object):
                 self.critic.encoder, self.critic_target.encoder,
                 self.encoder_tau
             )
-        
-        #if step % self.cpc_update_freq == 0 and self.encoder_type == 'pixel':
+
+        # if step % self.cpc_update_freq == 0 and self.encoder_type == 'pixel':
         #    obs_anchor, obs_pos = cpc_kwargs["obs_anchor"], cpc_kwargs["obs_pos"]
         #    self.update_cpc(obs_anchor, obs_pos,cpc_kwargs, L, step)
 
@@ -516,4 +533,3 @@ class RadSacAgent(object):
         self.critic.load_state_dict(
             torch.load('%s/critic_%s.pt' % (model_dir, step))
         )
- 
