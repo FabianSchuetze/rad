@@ -10,6 +10,7 @@ import utils
 from logger import Logger
 from video import VideoRecorder
 from curl_sac import RadSacAgent
+from gym_env import Downsampled
 
 
 def parse_args():
@@ -67,7 +68,7 @@ def parse_args():
     parser.add_argument('--save_tb', default=False, action='store_true')
     parser.add_argument('--save_buffer', default=False, action='store_true')
     parser.add_argument('--save_video', default=False, action='store_true')
-    parser.add_argument('--save_model', default=False, action='store_true')
+    parser.add_argument('--save_model', default=True, action='store_true')
     parser.add_argument('--detach_encoder', default=False, action='store_true')
     # data augs
     parser.add_argument('--data_augs', default='crop', type=str)
@@ -189,17 +190,19 @@ def main():
     # record the pre transform image size for translation
     pre_image_size = args.pre_transform_image_size
 
-    env = dmc2gym.make(
-        domain_name=args.domain_name,
-        task_name=args.task_name,
-        seed=args.seed,
-        visualize_reward=False,
-        from_pixels=(args.encoder_type == 'pixel'),
-        height=pre_transform_image_size,
-        width=pre_transform_image_size,
-        frame_skip=args.action_repeat
-    )
-    breakpoint()
+    if args.domain_name == 'CarRacing-v0':
+        env = Downsampled(pre_transform_image_size)
+    else:
+        env = dmc2gym.make(
+            domain_name=args.domain_name,
+            task_name=args.task_name,
+            seed=args.seed,
+            visualize_reward=False,
+            from_pixels=(args.encoder_type == 'pixel'),
+            height=pre_transform_image_size,
+            width=pre_transform_image_size,
+            frame_skip=args.action_repeat
+        )
 
     env.seed(args.seed)
 
@@ -298,7 +301,7 @@ def main():
 
         # run training update
         if step >= args.init_steps:
-            breakpoint()
+            # breakpoint()
             num_updates = 1
             for _ in range(num_updates):
                 agent.update(replay_buffer, L, step)

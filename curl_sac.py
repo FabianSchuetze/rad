@@ -482,7 +482,7 @@ class RadSacAgent(object):
             L.log('train/curl_loss', loss, step)
 
     def update(self, replay_buffer, L, step):
-        breakpoint()
+        # breakpoint()
         if self.encoder_type == 'pixel':
             obs, action, reward, next_obs, not_done = replay_buffer.sample_rad(
                 self.augs_funcs)
