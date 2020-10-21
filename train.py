@@ -11,8 +11,10 @@ from logger import Logger
 from video import VideoRecorder
 from curl_sac import RadSacAgent
 from gym_env import Downsampled
+from robot_env import RobotEnv
 
 
+#TODO: There is a bug in dealing with different img sizes
 def parse_args():
     parser = argparse.ArgumentParser()
     # environment
@@ -192,6 +194,8 @@ def main():
 
     if args.domain_name == 'CarRacing-v0':
         env = Downsampled(pre_transform_image_size)
+    elif args.domain_name == 'Sawyer':
+        env = RobotEnv(pre_transform_image_size)
     else:
         env = dmc2gym.make(
             domain_name=args.domain_name,
