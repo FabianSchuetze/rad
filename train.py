@@ -195,7 +195,8 @@ def main():
     if args.domain_name == 'CarRacing-v0':
         env = Downsampled(pre_transform_image_size)
     elif args.domain_name == 'Sawyer':
-        env = RobotEnv(pre_transform_image_size)
+        env = RobotEnv(pre_transform_image_size,
+                       frame_skip=args.action_repeat)
     else:
         env = dmc2gym.make(
             domain_name=args.domain_name,
